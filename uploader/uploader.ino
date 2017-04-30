@@ -7,11 +7,10 @@
 
 #define foreach_address for (int pin = ADDRESS_PIN_START; pin <= ADDRESS_PIN_END; pin++)
 
-
-
 #define foreach_pin \
     for (int pin = SHIFT_DATA_PIN; pin <= WRITE_PIN; (pin != 4) ? pin++ : pin = ADDRESS_PIN_START)
 
+#define ARRAY_LEN(x) (sizeof(x) / sizeof((x)[0]))
 
 int setAddress(signed char address) {
   if (address < 0 && address >= 16)
@@ -65,19 +64,121 @@ void setPinsAsInput() {
   digitalWrite(WRITE_PIN, HIGH);
 }
 
+int binaryToInt(String string) {
+  if (string.startsWith("0b")) {
+    int res = 0;
+    for (int pos = 2; pos < string.length(); pos++) {
+      if (string.charAt(pos) == '1' || string.charAt(pos) == '0') {
+        res |= (string.charAt(pos) == '1') ? 1 << (string.length() - pos - 1) : 0;
+      } else {
+        return -1;
+      }
+    }
+    return res;
+  } else {
+    return -1;
+  }
+}
+
+int hexToInt(String string) {
+  if (string.startsWith("0x")) {
+    int multiplier = 1;
+    int res = 0;
+    string.toLowerCase();
+    for (int pos = string.length() - 1; pos > 1; pos--) {
+      int charVal = testHex(string.charAt(pos));
+      if (charVal == -1){
+        return -1;
+      }
+      res += charVal * multiplier;
+      multiplier *= 16;
+    }
+    return res;
+  }
+  return -1;
+}
+
+int testHex(char hexChar) {
+  for (int toTest = 0; toTest < 16; toTest++) {
+    if (hexChar == String(toTest, HEX).charAt(0)) {
+      return toTest;
+    }
+  }
+  return -1;
+}
+
+int stringToInt(String string) {
+  int binVal = binaryToInt(string);
+  if (binVal != -1) {
+    return binVal;
+  }
+
+  int hexVal = hexToInt(string);
+  if (hexVal != -1) {
+    return hexVal;
+  }
+
+  return -1;
+}
+
+void parseCommand(String command) {
+  command.trim();
+  if (command.startsWith("SET")) {
+    setCommand(command);
+  }
+  else {
+    Serial.print("INVALID COMMAND. ");
+    Serial.println("NO COMMAND NAMED: \"" + command.substring(0, (command.indexOf(" ") != -1) ? command.indexOf(" ") : command.length()) + "\"");
+    return;
+  }
+}
+
+int count(String string, char value) {
+  int found = 0;
+  for (int index = 0; index < string.length(); index++) {
+    if (string.charAt(index) == value) found++;
+  }
+  return found;
+}
+
+void setCommand(String command) {
+  if (count(command, ' ') != 2) {
+    Serial.println("INVALID FORMAT FOR \"SET\" COMMAND");
+    return;
+  }
+  String com = command.substring(0, command.indexOf(" "));
+  command.remove(0, command.indexOf(" ") + 1);
+  int address = stringToInt(command.substring(0, command.indexOf(" ")));
+  command.remove(0, command.indexOf(" ") + 1);
+  int value = stringToInt(command);
+  if (address == -1 || value == -1) {
+    Serial.println("INVALID NUMBER FORMAT");
+    return;
+  }
+  if (writeData(address, value) != -1) {
+    Serial.print("SUCCESS! ADDRESS: 0b");
+    Serial.print(String(address, BIN));
+    Serial.print(" VALUE: 0b");
+    Serial.println(String(value, BIN));
+  } else {
+    Serial.println("FAILED TO WRITE DATA");
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   setPinsAsInput();
-  
-  
 }
 
 void loop() {
-  while (Serial.available() == 0) {}
-  Serial.read();
-  Serial.println("RECIVED");
-  for (int i = 0; i < 16; i++) {
+  if (Serial.available() > 0) {
+    String recived = Serial.readString();
+    parseCommand(recived);
+  }
+  /*for (int i = 0; i < 16; i++) {
     writeData(i, i);
   }
   Serial.println("DONE");
+  */
+  
 }
