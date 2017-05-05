@@ -92,7 +92,7 @@ def parse(text):
 	output = ""
 	prog_address = 0
 	for lineno, line in enumerate(text.split("\n")):
-		print("LINE %d: %s" %(lineno + 1, line))
+		#print("LINE %d: %s" %(lineno + 1, line))
 		if line:
 			if DEFINE_STATEMENT.match(line):
 				variable, address = line.split()[1:]
@@ -107,7 +107,7 @@ def parse(text):
 						op, *data = line.split() if len(line.split()) == nargs + 1 else (-1, *line.split()[1:])
 						if op != -1:
 							output_data =  bin(OP_CODES[op] << 4 | toInteger(toAddress(data[0] if len(data) != 0 else "0b0", variables)))[2:].zfill(8)
-							output += "SET " + bin(prog_address) + " " + "0b" + output_data[0:4] + " " + output_data[4:] + "\n"
+							output += ("SET " + bin(prog_address) + " " + "0b" + output_data[0:4] + "{}" + output_data[4:] + "\n").format("")
 							prog_address += 1
 							break
 						else:
