@@ -121,15 +121,15 @@ int stringToInt(String string) {
   return -1;
 }
 
-void parseCommand(String command) {
+int parseCommand(String command) {
   command.trim();
   if (command.startsWith("SET")) {
-    setCommand(command);
+    return setCommand(command);
   }
   else {
     Serial.print("INVALID COMMAND. ");
-    Serial.println("NO COMMAND NAMED: \"" + command.substring(0, (command.indexOf(" ") != -1) ? command.indexOf(" ") : command.length()) + "\"");
-    return;
+    Serial.println("NO COMMAND NAMED: \"" + command.substring(0, (command.indexOf(" ") != -1) ? command.indexOf(" ") : command.length()) + "\"\r");
+    return -1;
   }
 }
 
@@ -141,10 +141,10 @@ int count(String string, char value) {
   return found;
 }
 
-void setCommand(String command) {
+int setCommand(String command) {
   if (count(command, ' ') != 2) {
-    Serial.println("INVALID FORMAT FOR \"SET\" COMMAND");
-    return;
+    Serial.println("INVALID FORMAT FOR \"SET\" COMMAND\r");
+    return -1;
   }
   String com = command.substring(0, command.indexOf(" "));
   command.remove(0, command.indexOf(" ") + 1);
@@ -152,16 +152,19 @@ void setCommand(String command) {
   command.remove(0, command.indexOf(" ") + 1);
   int value = stringToInt(command);
   if (address == -1 || value == -1) {
-    Serial.println("INVALID NUMBER FORMAT");
-    return;
+    Serial.println("INVALID NUMBER FORMAT\r");
+    return -1;
   }
   if (writeData(address, value) != -1) {
     Serial.print("SUCCESS! ADDRESS: 0b");
     Serial.print(String(address, BIN));
     Serial.print(" VALUE: 0b");
-    Serial.println(String(value, BIN));
+    Serial.print(String(value, BIN));
+    Serial.println("\r");
+    return 0;
   } else {
-    Serial.println("FAILED TO WRITE DATA");
+    Serial.println("FAILED TO WRITE DATA\r");
+    return -1;
   }
 }
 
@@ -173,7 +176,9 @@ void setup() {
 void loop() {
   if (Serial.available() > 0) {
     String recived = Serial.readString();
-    parseCommand(recived);
+    Serial.print(parseCommand(recived));
+    Serial.println("\r");
+    
   }
   /*for (int i = 0; i < 16; i++) {
     writeData(i, i);
