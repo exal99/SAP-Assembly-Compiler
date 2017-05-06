@@ -1,4 +1,4 @@
-# ASEMBELR 
+# ASEMBELR
 
 import re, sys
 
@@ -89,7 +89,8 @@ def getInvalidArgPos(line, nargs):
 def parse(text):
 	sys.excepthook = exception_handler
 	variables = {}
-	output = ""
+	text_output = ""
+	compiled = bytes()
 	prog_address = 0
 	for lineno, line in enumerate(text.split("\n")):
 		#print("LINE %d: %s" %(lineno + 1, line))
@@ -100,14 +101,16 @@ def parse(text):
 
 			elif SET_STATEMENT.match(line):
 				memAddress, value = line.split()[1:]
-				output += "SET " + bin(toInteger(toAddress(memAddress, variables))) + " " + bin(toInteger(value)) + "\n"
+				text_output += "SET " + bin(toInteger(toAddress(memAddress, variables))) + " " + bin(toInteger(value)) + "\n"
+				compiled += bytes([1, toInteger(toAddress(memAddress, variables)), toInteger(value)])
 			else:
 				for statement, nargs in STATEMENTS:
 					if statement.match(line.strip()):
 						op, *data = line.split() if len(line.split()) == nargs + 1 else (-1, *line.split()[1:])
 						if op != -1:
 							output_data =  bin(OP_CODES[op] << 4 | toInteger(toAddress(data[0] if len(data) != 0 else "0b0", variables)))[2:].zfill(8)
-							output += ("SET " + bin(prog_address) + " " + "0b" + output_data[0:4] + "{}" + output_data[4:] + "\n").format("")
+							text_output += ("SET " + bin(prog_address) + " " + "0b" + output_data[0:4] + "{}" + output_data[4:] + "\n").format("")
+							compiled += bytes([1, prog_address, int(output_data, 2)])
 							prog_address += 1
 							break
 						else:
@@ -116,7 +119,7 @@ def parse(text):
 				else:
 					print()
 					raise make_error("Unknow command on line: %d" %(lineno + 1), line, lineno + 1, 0)
-	return output
+	return text_output, compiled
 
 
 def readProg():
@@ -133,5 +136,5 @@ def main():
 	print(prog)
 
 if __name__ == '__main__':
-	
+
 	main()

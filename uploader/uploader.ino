@@ -12,6 +12,11 @@
 
 #define ARRAY_LEN(x) (sizeof(x) / sizeof((x)[0]))
 
+#define SUCCESS 0
+#define FAIL 1
+
+boolean textMode = false;
+
 int setAddress(signed char address) {
   if (address < 0 && address >= 16)
     return -1;
@@ -121,10 +126,16 @@ int stringToInt(String string) {
   return -1;
 }
 
-int parseCommand(String command) {
+int parseTextCommand(String command) {
   command.trim();
   if (command.startsWith("SET")) {
     return setCommand(command);
+  } else if (command.compareTo("BIN") == 0) {
+    textMode = false;
+    return 0;
+  } else if (command.compareTo("TXT") == 0) {
+    textMode = true;
+    return 0;
   }
   else {
     Serial.print("INVALID COMMAND. ");
@@ -132,6 +143,7 @@ int parseCommand(String command) {
     return -1;
   }
 }
+
 
 int count(String string, char value) {
   int found = 0;
@@ -168,17 +180,59 @@ int setCommand(String command) {
   }
 }
 
+int setBinaryCommand(char command[3]) {
+  if (writeData(command[1], command[2]) == 0) {
+    Serial.write(SUCCESS);
+    return 0;
+  } else {
+    Serial.write(FAIL);
+    return -1;
+  }
+}
+
+void parseBinaryCommand(char command[3]) {
+  char textCommand[4];
+  copyArray(command, textCommand, 3),
+  textCommand[3] = '\0';
+  if (strcmp(textCommand, "TXT") == 0) {
+    textMode = true;
+    Serial.println("Switched to TXT-mode\r");
+  } else if (strcmp(textCommand, "BIN") == 0) {
+    textMode = false;
+    Serial.write(SUCCESS);
+  } else if (command[0] == 1) {
+    setBinaryCommand(command);
+  } else {
+    Serial.write(FAIL);
+  }
+}
+
+
+void copyArray(char copyFrom[], char copyTo[], int numToCopy) {
+  for (int i = 0; i < numToCopy; i++) {
+    copyTo[i] = copyFrom[i];
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   setPinsAsInput();
+  Serial.write(SUCCESS);
+  //Serial.println("DONE");
 }
 
 void loop() {
   if (Serial.available() > 0) {
-    String recived = Serial.readString();
-    Serial.print(parseCommand(recived));
-    Serial.println("\r");
     
+    if (textMode) {
+      String recived = Serial.readString();
+      Serial.print(parseTextCommand(recived));
+      Serial.println("\r");
+    } else {
+      char buff[3];
+      Serial.readBytes(buff, 3);
+      parseBinaryCommand(buff);
+    }
   }
   /*for (int i = 0; i < 16; i++) {
     writeData(i, i);
